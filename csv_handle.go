@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func WithCsvHandle[T any](log *logrus.Logger, fileName string, opts ...rotatefile.Option) func([]byte) {
+func WithCsvJsonHandle[T any](log *logrus.Logger, fileName string, opts ...rotatefile.Option) func([]byte) {
 	writer, err := rotatefile.New(
 		fileName + "_%Y%m%d%H%M.csv",
 		rotatefile.WithMaxAge(time.Duration(24*7)*time.Hour),
@@ -22,6 +22,28 @@ func WithCsvHandle[T any](log *logrus.Logger, fileName string, opts ...rotatefil
 		obj := new(T)
 		json.Unmarshal(rawData, obj)
 		if data ,err := gocsv.MarshalStringWithoutHeaders([]T{*obj}); err != nil {
+			log.Error(err)
+		}else{
+			_, err :=writer.Write([]byte(data))
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+
+}
+
+func WithCsvHandle[T any](log *logrus.Logger, fileName string, opts ...rotatefile.Option) func(T) {
+	writer, err := rotatefile.New(
+		fileName + "_%Y%m%d%H%M.csv",
+		rotatefile.WithMaxAge(time.Duration(24*7)*time.Hour),
+		rotatefile.WithRotationTime(time.Duration(1)*time.Hour),
+	)
+	if err != nil {
+		panic(err)
+	}
+	return func(obj T) {
+		if data ,err := gocsv.MarshalStringWithoutHeaders([]T{obj}); err != nil {
 			log.Error(err)
 		}else{
 			_, err :=writer.Write([]byte(data))
